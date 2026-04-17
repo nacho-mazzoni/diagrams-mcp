@@ -21,6 +21,24 @@ function mapCardinality(card) {
   }
 }
 
+/**
+ * Convierte textos como "many-to-one" a los lados izquierdo y derecho de Mermaid
+ */
+function parseRelationshipType(type) {
+  switch (type?.toLowerCase()) {
+    case "one-to-one":
+      return { left: "||", right: "||" };
+    case "one-to-many":
+      return { left: "||", right: "o{" };
+    case "many-to-one":
+      return { left: "}o", right: "||" };
+    case "many-to-many":
+      return { left: "}o", right: "o{" };
+    default:
+      return { left: "||", right: "||" }; // Fallback
+  }
+}
+
 function buildERDiagram(data) {
   const lines = ["erDiagram", ""];
 
@@ -48,12 +66,25 @@ function buildERDiagram(data) {
   }
 
   // relaciones con cardinalidad
-  for (const rel of data.relations || []) {
-    const left = mapCardinality(rel.fromCard || "1");
-    const right = mapCardinality(rel.toCard || "*");
+  const relationsArray = data.relationships || data.relations || [];
+  for (const rel of relationsArray) {
+    let leftCard, rightCard, label;
 
+    if (rel.type) {
+      const parsed = parseRelationshipType(rel.type);
+      leftCard = parsed.left;
+      rightCard = parsed.right;
+      // Tomamos el field o un nombre genérico, y reemplazamos espacios por guiones bajos
+      label = (rel.field || rel.description || "relacion").replace(/\s+/g, "_"); 
+    } else {
+      leftCard = mapCardinality(rel.fromCard || "1");
+      rightCard = mapCardinality(rel.toCard || "*");
+      label = (rel.label || "rel").replace(/\s+/g, "_");
+    }
+
+    // Generamos la conexión SIN comillas, que a veces rompe versiones viejas de mmdc
     lines.push(
-      `${rel.from.toUpperCase()} ${left}--${right} ${rel.to.toUpperCase()} : ${rel.label || ""}`
+      `${rel.from.toUpperCase()} ${leftCard}--${rightCard} ${rel.to.toUpperCase()} : ${label}`
     );
   }
 

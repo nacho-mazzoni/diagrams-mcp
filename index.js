@@ -8,6 +8,9 @@ import {
 import { generateClassDiagram } from "./tools/classDiagram.js";
 import { generateERDiagram } from "./tools/erDiagram.js";
 
+import { parseTextToClass } from "./parsers/textToClass.js";
+import { parseTextToER } from "./parsers/textToER.js";
+
 const server = new Server(
   {
     name: "diagram-mcp",
@@ -28,6 +31,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
+          text: { type: "string" },
           classes: {
             type: "array",
             items: { type: "object" }
@@ -45,6 +49,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => ({
       inputSchema: {
         type: "object",
         properties: {
+          text: { type: "string" },
           entities: {
             type: "array",
             items: { type: "object" }
@@ -63,14 +68,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   if (name === "generate_class_diagram") {
-    const result = await generateClassDiagram(args);
+
+    let data = args;
+
+    // si viene texto natural
+    if (args.text) {
+      data = parseTextToClass(args.text);
+    }
+
+    const result = await generateClassDiagram(data);
+
     return {
       content: [{ type: "text", text: result.svg }]
     };
   }
 
   if (name === "generate_er_diagram") {
-    const result = await generateERDiagram(args);
+
+    let data = args;
+
+    // si viene texto natural
+    if (args.text) {
+      data = parseTextToER(args.text);
+    }
+
+    const result = await generateERDiagram(data);
+
     return {
       content: [{ type: "text", text: result.svg }]
     };

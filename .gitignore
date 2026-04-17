@@ -3,3 +3,7 @@ node_modules/*
 
 // ignore all test files
 test/*
+
+// ignore all files in the interpreter folder
+interpreter-env/*
+
