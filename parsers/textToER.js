@@ -1,114 +1,65 @@
-import fs from "fs";
-import { execSync } from "child_process";
+export function textToER(text) {
+  const entitiesMap = new Map();
+  const relations = [];
 
-/**
- * Convierte cardinalidad clásica a sintaxis Mermaid (Mantiene compatibilidad)
- */
-function mapCardinality(card) {
-  switch (card) {
-    case "1":
-    case "1..1":
-      return "||";
-    case "0..1":
-      return "o|";
-    case "1..*":
-      return "|{";
-    case "0..*":
-    case "*":
-      return "o{";
-    default:
-      return "||";
+  const lines = text.split("\n");
+
+  function ensureEntity(name) {
+    if (!entitiesMap.has(name)) {
+      entitiesMap.set(name, {
+        name,
+        attributes: []
+      });
+    }
   }
-}
 
-/**
- * Convierte textos como "many-to-one" a los lados izquierdo y derecho de Mermaid
- */
-function parseRelationshipType(type) {
-  switch (type?.toLowerCase()) {
-    case "one-to-one":
-      return { left: "||", right: "||" };
-    case "one-to-many":
-      return { left: "||", right: "o{" };
-    case "many-to-one":
-      return { left: "}o", right: "||" };
-    case "many-to-many":
-      return { left: "}o", right: "o{" };
-    default:
-      return { left: "||", right: "||" }; // Fallback
-  }
-}
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
 
-function buildERDiagram(data) {
-  const lines = ["erDiagram", ""];
+    // Declarar una entidad. Ej: "Entidad Usuario"
+    let match = trimmed.match(/^Entidad\s+(\w+)/i);
+    if (match) {
+      ensureEntity(match[1]);
+      continue;
+    }
 
-  // Entidades
-  for (const entity of data.entities || []) {
-    lines.push(`${entity.name.toUpperCase()} {`);
+    // Atributos (soporta PK y FK). Ej: "Usuario tiene id PK" o "Usuario tiene email"
+    match = trimmed.match(/^(\w+)\s+tiene\s+(\w+)(?:\s+(PK|FK))?/i);
+    if (match) {
+      const [, entityName, attrName, keyType] = match;
+      ensureEntity(entityName);
 
-    for (const attr of entity.attributes || []) {
-      if (typeof attr === "string") {
-        lines.push(`  string ${attr}`);
-        continue;
+      const attr = { name: attrName };
+      
+      if (keyType) {
+        if (keyType.toUpperCase() === 'PK') attr.pk = true;
+        if (keyType.toUpperCase() === 'FK') attr.fk = true;
       }
 
-      let suffix = "";
-      if (attr.pk) suffix += " PK";
-      if (attr.fk) suffix += " FK";
-
-      lines.push(`  string ${attr.name}${suffix}`);
+      entitiesMap.get(entityName).attributes.push(attr);
+      continue;
     }
 
-    lines.push("}");
-    lines.push("");
-  }
+    // Relaciones. Ej: "Usuario one-to-many Post : escribe" o "Snap many-to-one User"
+    match = trimmed.match(/^(\w+)\s+(one-to-one|one-to-many|many-to-one|many-to-many)\s+(\w+)(?:\s*:\s*(.+))?/i);
+    if (match) {
+      const [, from, type, to, label] = match;
+      ensureEntity(from);
+      ensureEntity(to);
 
-  // Relaciones (Soporta el array viejo 'relations' o el nuevo 'relationships')
-  const relationsArray = data.relationships || data.relations || [];
-
-  for (const rel of relationsArray) {
-    let leftCard, rightCard, label;
-
-    // Si viene con el formato semántico nuevo ("type": "many-to-one")
-    if (rel.type) {
-      const parsed = parseRelationshipType(rel.type);
-      leftCard = parsed.left;
-      rightCard = parsed.right;
-      // Usamos 'field' como etiqueta principal, o 'description' como fallback
-      label = rel.field || rel.description || "rel"; 
-    } else {
-      // Fallback al formato numérico anterior
-      leftCard = mapCardinality(rel.fromCard || "1");
-      rightCard = mapCardinality(rel.toCard || "*");
-      label = rel.label || "rel";
+      relations.push({
+        from,
+        to,
+        type: type.toLowerCase(),
+        label: label ? label.trim() : "relacion"
+      });
+      continue;
     }
-
-    // Armamos la línea. Las comillas en el label evitan que Mermaid se rompa si hay espacios
-    lines.push(
-      `${rel.from.toUpperCase()} ${leftCard}--${rightCard} ${rel.to.toUpperCase()} : "${label}"`
-    );
   }
 
-  return lines.join("\n");
-}
-
-export async function generateERDiagram(data) {
-  const diagram = buildERDiagram(data);
-
-  console.log("---- ER MERMAID ----");
-  console.log(diagram);
-  console.log("--------------------");
-
-  const tmpBase = `/tmp/er-${Date.now()}`;
-  const inputFile = `${tmpBase}.mmd`;
-  const outputFile = `${tmpBase}.svg`;
-
-  fs.writeFileSync(inputFile, diagram);
-
-  // Le agregamos fondo blanco explícito para evitar problemas de contraste
-  execSync(`mmdc -i ${inputFile} -o ${outputFile} -b white`);
-
-  const svg = fs.readFileSync(outputFile, "utf8");
-
-  return { svg };
+  return {
+    entities: [...entitiesMap.values()],
+    relations
+  };
 }

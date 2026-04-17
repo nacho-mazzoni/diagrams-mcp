@@ -1,5 +1,7 @@
 import fs from "fs";
 import { execSync } from "child_process";
+import os from "os";
+import path from "path";
 
 /**
  * Convierte cardinalidad a sintaxis Mermaid
@@ -98,7 +100,7 @@ export async function generateERDiagram(data) {
   console.log(diagram);
   console.log("--------------------");
 
-  const tmpBase = `/tmp/er-${Date.now()}`;
+  const tmpBase = path.join(os.tmpdir(), `er-${Date.now()}`);
   const inputFile = `${tmpBase}.mmd`;
   const outputFile = `${tmpBase}.svg`;
 

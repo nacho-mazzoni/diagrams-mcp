@@ -8,8 +8,8 @@ import {
 import { generateClassDiagram } from "./tools/classDiagram.js";
 import { generateERDiagram } from "./tools/erDiagram.js";
 
-import { parseTextToClass } from "./parsers/textToClass.js";
-import { parseTextToER } from "./parsers/textToER.js";
+import { textToClass } from "./parsers/textToClass.js";
+import { textToER } from "./parsers/textToER.js";
 
 const server = new Server(
   {
@@ -68,32 +68,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
   if (name === "generate_class_diagram") {
-
-    let data = args;
-
-    // si viene texto natural
-    if (args.text) {
-      data = parseTextToClass(args.text);
-    }
-
-    const result = await generateClassDiagram(data);
-
+    // Usamos directamente los argumentos que manda Cursor
+    const result = await generateClassDiagram(args);
     return {
       content: [{ type: "text", text: result.svg }]
     };
   }
 
   if (name === "generate_er_diagram") {
-
-    let data = args;
-
-    // si viene texto natural
-    if (args.text) {
-      data = parseTextToER(args.text);
-    }
-
-    const result = await generateERDiagram(data);
-
+    // Usamos directamente los argumentos que manda Cursor
+    const result = await generateERDiagram(args);
     return {
       content: [{ type: "text", text: result.svg }]
     };
@@ -103,4 +87,4 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 
 const transport = new StdioServerTransport();
-await server.connect(transport); 
+await server.connect(transport);

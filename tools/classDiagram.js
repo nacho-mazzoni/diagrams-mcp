@@ -1,11 +1,28 @@
 import fs from "fs";
 import { execSync } from "child_process";
+import os from "os";
+import path from "path";
 
 function normalizeMember(member) {
-  return member
-    .replace(/\s*:\s*/g, ":")
-    .replace(/\s+/g, " ")
-    .trim();
+  // Si el agente decidió mandar un objeto en lugar de un string
+  if (typeof member === "object" && member !== null) {
+    const visibility = member.visibility || "+";
+    const name = member.name || "";
+    const type = member.type ? `:${member.type}` : "";
+    
+    // Armamos el string que espera Mermaid: "+nombre:tipo"
+    return `${visibility}${name}${type}`.replace(/\s+/g, " ").trim();
+  }
+
+  // Si mandó un string normal (como esperábamos originalmente)
+  if (typeof member === "string") {
+    return member
+      .replace(/\s*:\s*/g, ":")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  return "";
 }
 
 function buildClassDiagram(data) {
@@ -48,7 +65,7 @@ export async function generateClassDiagram(data) {
   console.log(diagram);
   console.log("-----------------");
 
-  const tmpBase = `/tmp/diagram-${Date.now()}`;
+  const tmpBase = path.join(os.tmpdir(), `diagram-${Date.now()}`);
   const inputFile = `${tmpBase}.mmd`;
   const outputFile = `${tmpBase}.svg`;
 
