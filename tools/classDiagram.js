@@ -58,22 +58,29 @@ function buildClassDiagram(data) {
   return lines.join("\n");
 }
 
-export async function generateClassDiagram(data) {
+export async function generateClassDiagram(data, format = "svg") {
   const diagram = buildClassDiagram(data);
 
-  console.log("---- MERMAID ----");
-  console.log(diagram);
-  console.log("-----------------");
+  const isPdf = format.toLowerCase() === "pdf";
 
-  const tmpBase = path.join(os.tmpdir(), `diagram-${Date.now()}`);
+  // Si es PDF lo guarda en tu proyecto actual. Si es SVG, va a temporales.
+  const baseDir = isPdf ? process.cwd() : os.tmpdir();
+  const tmpBase = path.join(baseDir, `DiagramaClases-${Date.now()}`);
+
   const inputFile = `${tmpBase}.mmd`;
-  const outputFile = `${tmpBase}.svg`;
+  const outputFile = `${tmpBase}.${isPdf ? "pdf" : "svg"}`;
 
   fs.writeFileSync(inputFile, diagram);
 
-  execSync(`mmdc -i ${inputFile} -o ${outputFile}`);
-
-  const svg = fs.readFileSync(outputFile, "utf8");
-
-  return { svg };
+  execSync(`mmdc -i "${inputFile}" -o "${outputFile}" -b white`);
+  
+  if (isPdf) {
+      // Si es PDF, borramos el .mmd para mantener limpio tu proyecto y devolvemos la ruta
+      fs.unlinkSync(inputFile);
+      return { isPdf: true, path: outputFile };
+    }
+  
+    // Si es SVG, devolvemos el texto crudo como veníamos haciendo
+    const svg = fs.readFileSync(outputFile, "utf8");
+    return { isPdf: false, svg };
 }

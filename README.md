@@ -23,19 +23,19 @@ git clone https://github.com/nacho-mazzoni/diagrams-mcp.git
 cd diagrams-mcp
 ```
 
-2. Instalar dependencias
+1. Instalar dependencias
 
 ```
 npm install
 ```
 
-3. Instalar Mermaid CLI (si no está instalado)
+1. Instalar Mermaid CLI (si no está instalado)
 
 ```
 npm install -g @mermaid-js/mermaid-cli
 ```
 
-4. Verificar instalación
+1. Verificar instalación
 
 ```
 mmdc -h
@@ -150,5 +150,5 @@ diagrams-mcp
 ---
 
 ## Aclaraciones
-El MCP también soporta definición de entidades con atributos, claves primarias (PK) y foráneas (FK) mediante bloques de texto separados por líneas en blanco, permitiendo generar diagramas ER completos desde descripciones estructuradas.
 
+El MCP también soporta definición de entidades con atributos, claves primarias (PK) y foráneas (FK) mediante bloques de texto separados por líneas en blanco, permitiendo generar diagramas ER completos desde descripciones estructuradas.

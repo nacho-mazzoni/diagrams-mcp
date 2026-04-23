@@ -93,22 +93,30 @@ function buildERDiagram(data) {
   return lines.join("\n");
 }
 
-export async function generateERDiagram(data) {
+export async function generateERDiagram(data, format = "svg") {
   const diagram = buildERDiagram(data);
 
-  console.log("---- ER MERMAID ----");
-  console.log(diagram);
-  console.log("--------------------");
+  const isPdf = format.toLowerCase() === "pdf";
 
-  const tmpBase = path.join(os.tmpdir(), `er-${Date.now()}`);
+  //Si es PDF lo guarda en tu proyecto actual. Si es SVG, va a temporales.
+  const baseDir = isPdf ? process.cwd() : os.tmpdir();
+  const tmpBase = path.join(baseDir, `DiagramaER-${Date.now()}`);
+
   const inputFile = `${tmpBase}.mmd`;
-  const outputFile = `${tmpBase}.svg`;
+  const outputFile = `${tmpBase}.${isPdf ? "pdf" : "svg"}`;
 
   fs.writeFileSync(inputFile, diagram);
 
-  execSync(`mmdc -i ${inputFile} -o ${outputFile}`);
+  // Generamos usando mmdc (forzamos fondo blanco para que el PDF no quede transparente/oscuro)
+  execSync(`mmdc -i "${inputFile}" -o "${outputFile}" -b white`);
 
+ if (isPdf) {
+    // Si es PDF, borramos el .mmd para mantener limpio tu proyecto y devolvemos la ruta
+    fs.unlinkSync(inputFile);
+    return { isPdf: true, path: outputFile };
+  }
+
+  // Si es SVG, devolvemos el texto crudo como veníamos haciendo
   const svg = fs.readFileSync(outputFile, "utf8");
-
-  return { svg };
+  return { isPdf: false, svg };
 }
